@@ -9,62 +9,96 @@
 #import "CalculatorBrain.h"
 
 @interface CalculatorBrain()
-@property (nonatomic, strong) NSMutableArray *operandStack;
+@property (nonatomic, strong) NSMutableArray *programStack;
 @end
 
 @implementation CalculatorBrain
 
-@synthesize operandStack = _operandStack;
+@synthesize programStack = _programStack;
 
-- (NSMutableArray *)operandStack {
-    if (_operandStack == nil) {
-        _operandStack = [[NSMutableArray alloc] init];
+- (NSMutableArray *)programStack {
+    if (_programStack == nil) {
+        _programStack = [[NSMutableArray alloc] init];
     }
-    return _operandStack;
+    return _programStack;
 }
 
 - (void)pushOperand:(double)operand {
-    [self.operandStack addObject:[NSNumber numberWithDouble:operand]];
-}
-
-- (double)popOperand {
-    NSNumber *operandObject = [self.operandStack lastObject];
-    if (operandObject) {
-        [self.operandStack removeLastObject];
-    }
-    return [operandObject doubleValue];
+    [self.programStack addObject:[NSNumber numberWithDouble:operand]];
 }
 
 - (void)clearStack {
-    [self.operandStack removeAllObjects];
+    [self.programStack removeAllObjects];
 }
 
 - (double)performOperation:(NSString *)operation {
+    
+    [self.programStack addObject:operation];
+    return [CalculatorBrain runProgram:self.program];
+}
+
+- (id)program {
+    return [self.programStack copy];
+}
+
++ (NSString *)descriptionOfProgram:(id)program {
+    NSString *description = @"";
+    
+    if ([program isKindOfClass:[NSArray class]]) {
+        for (id stackElement in program) {
+            if ([stackElement isKindOfClass:[NSString class]] || [stackElement isKindOfClass:[NSNumber class]]) {
+                description = [description stringByAppendingString:[stackElement description]];
+            }
+        }
+    }
+    return description;
+}
+
++ (double)popOperandOffStack:(NSMutableArray *)stack {
     double result = 0;
     
-    if ([operation isEqualToString:@"+"]) {
-        result = [self popOperand] + [self popOperand];
-    } else if ([operation isEqualToString:@"*"]) {
-        result = [self popOperand] * [self popOperand];
-    } else if ([operation isEqualToString:@"/"]) {
-        result = [self popOperand] / [self popOperand];
-    } else if ([operation isEqualToString:@"-"]) {
-        result = - [self popOperand] + [self popOperand];
-    } else if ([operation isEqualToString:@"sin"]) {
-        result = sin([self popOperand]);
-    } else if ([operation isEqualToString:@"cos"]) {
-        result = cos([self popOperand]);
-    } else if ([operation isEqualToString:@"sqrt"]) {
-        result = sqrt([self popOperand]);
-    } else if ([operation isEqualToString:@"π"]) {
-        result = M_PI;
-    } else if ([operation isEqualToString:@"+/-"]) {
-        result = [self popOperand] * -1;
+    id topOfStack = [stack lastObject];
+    
+    if (topOfStack) {
+        [stack removeLastObject];
     }
-    [self pushOperand:result];
+    
+    if ([topOfStack isKindOfClass:[NSNumber class]]) {
+        result = [topOfStack doubleValue];
+    }
+    else if ([topOfStack isKindOfClass:[NSString class]]) {
+        NSString *operation = topOfStack;
+        
+        if ([operation isEqualToString:@"+"]) {
+            result = [self popOperandOffStack:stack] + [self popOperandOffStack:stack];
+        } else if ([operation isEqualToString:@"*"]) {
+            result = [self popOperandOffStack:stack] * [self popOperandOffStack:stack];
+        } else if ([operation isEqualToString:@"/"]) {
+            result = [self popOperandOffStack:stack] / [self popOperandOffStack:stack];
+        } else if ([operation isEqualToString:@"-"]) {
+            result = - [self popOperandOffStack:stack] + [self popOperandOffStack:stack];
+        } else if ([operation isEqualToString:@"sin"]) {
+            result = sin([self popOperandOffStack:stack]);
+        } else if ([operation isEqualToString:@"cos"]) {
+            result = cos([self popOperandOffStack:stack]);
+        } else if ([operation isEqualToString:@"sqrt"]) {
+            result = sqrt([self popOperandOffStack:stack]);
+        } else if ([operation isEqualToString:@"π"]) {
+            result = M_PI;
+        } else if ([operation isEqualToString:@"+/-"]) {
+            result = [self popOperandOffStack:stack] * -1;
+        }
+    }
     
     return result;
 }
 
++ (double)runProgram:(id)program {
+    NSMutableArray *stack;
+    if ([program isKindOfClass:[NSArray class]]) {
+        stack = [program mutableCopy];
+    }
+    return [self popOperandOffStack:stack];
+}
 
 @end
